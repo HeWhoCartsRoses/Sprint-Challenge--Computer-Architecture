@@ -4,16 +4,11 @@ class CPU:
         self.reg = [0]*8
         self.reg[7] = 0xff
         self.pc = self.reg[0]
-        self.equal = 0
-        self.great = 0
-        self.less = 0
+        self.fl = 0b00000000
         self.cmn = {
             0b00000001: self.hlt,
             0b10000010: self.ldi,
             0b01000111: self.prn,
-            0b10100010: self.mult,
-            0b01000101: self.shove,
-            0b01000110: self.pull,
             0b10100111: self.comp,
             0b01010100: self.jmp,
             0b01010101: self.jeq,
@@ -21,8 +16,6 @@ class CPU:
         }
 
     def load(self, stuff):
-        """Load a program into memory."""
-
         address = 0
         program = []
         f = open(stuff)
@@ -39,32 +32,30 @@ class CPU:
         return (0, False)
 
     def jeq(self, reg, b):
-        if self.equal == 1:
-            self.jmp(reg)
-        return(2, True)
+        if self.fl == 1:
+            return self.jmp(reg)
+        else:
+            return(2, True)
 
     def jne(self, reg, b):
-        if self.equal == 0:
-            self.jmp(reg)
-        return(2, True)
+        if self.fl != 1:
+            return self.jmp(reg)
+        else:
+            return(2, True)
 
     def jmp(self, reg):
         self.pc = self.reg[reg]
         return(0, True)
 
     def comp(self, a, b):
+        a = self.reg[a]
+        b = self.reg[b]
         if a == b:
-            self.great = 0
-            self.less = 0
-            self.equal = 1
-        if a < b:
-            self.great = 0
-            self.less = 1
-            self.equal = 0
-        if a > b:
-            self.great = 1
-            self.less = 0
-            self.equal = 0
+            self.fl = 0b00000001
+        elif a < b:
+            self.fl = 0b00000100
+        elif a > b:
+            self.fl = 0b00000010
         return(3, True)
 
     def ldi(self, a, b):
@@ -75,10 +66,6 @@ class CPU:
         print(self.reg[a])
         return (2, True)
 
-    def mult(self, a, b):
-        self.reg[a] = self.reg[a]*self.reg[b]
-        return (3, True)
-
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
@@ -87,15 +74,6 @@ class CPU:
         # elif op == "SUB": etc
         else:
             raise Exception("Unsupported ALU operation")
-
-    def shove(self, a, b):
-        self.ram[self.reg[7]-1] = self.reg[a]
-        return (2, True)
-
-    def pull(self, a, b):
-        self.reg[a] = self.ram[self.reg[7]]
-        self.reg[7] += 1
-        return(2, True)
 
     def ram_read(self, point):
         return self.ram[point]
@@ -118,6 +96,10 @@ class CPU:
                 run = op[1]
                 self.pc += op[0]
             except:
-                print(self.pc)
-                print(IR)
                 break
+
+
+cpu = CPU()
+
+cpu.load('./sctest.ls8')
+cpu.run()
